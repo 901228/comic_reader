@@ -1,0 +1,50 @@
+import 'dart:io';
+
+import 'package:comic_reader/fileViewer_page/fileViewer.dart';
+import 'package:comic_reader/providers.dart';
+import 'package:filesystem_picker/filesystem_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+class FolderPicker extends StatelessWidget {
+  const FolderPicker({required this.isDesktop}) : super();
+
+  final bool isDesktop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, watch, child) => MaterialButton(
+        color: Colors.white,
+        textColor: Colors.blue,
+        child: Icon(
+          Icons.add,
+          size: kToolbarHeight * 0.6,
+        ),
+        onPressed: () async {
+          await selectStorage(context).then((value) async {
+            String path = await FilesystemPicker.open(
+                  title: 'Select the folder',
+                  context: context,
+                  rootDirectory: watch(storageStatusProvider).nowDirectory,
+                  rootName: watch(storageStatusProvider).nowDirectory.path,
+                  fsType: FilesystemType.folder,
+                  pickText: 'Select the folder',
+                  folderIconColor: Colors.teal,
+                  fileTileSelectMode: FileTileSelectMode.wholeTile,
+                  requestPermission: !isDesktop
+                      ? () async => await Permission.storage.request().isGranted
+                      : null,
+                ) ??
+                "";
+            if (path.isNotEmpty) {
+              print(Directory(path).uri);
+              context.read(filePathProvider).addNewDirectory(Directory(path));
+            }
+          });
+        },
+      ),
+    );
+  }
+}
