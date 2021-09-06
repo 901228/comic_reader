@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:preload_page_view/preload_page_view.dart';
 
 final ChangeNotifierProvider<StorageStatus> storageStatusProvider =
     ChangeNotifierProvider((_) => StorageStatus());
@@ -120,12 +121,12 @@ class PhotoSliderProc extends ChangeNotifier {
   void init(double initPage) {
     _nowPage = initPage;
     _pageController.dispose();
-    _pageController = PageController(initialPage: initPage.toInt());
+    _pageController = PreloadPageController(initialPage: initPage.toInt());
   }
 
-  PageController _pageController = PageController();
+  PreloadPageController _pageController = PreloadPageController();
 
-  PageController get pageController => _pageController;
+  PreloadPageController get pageController => _pageController;
 
   static bool isImage(String path) {
     final mimeType = lookupMimeType(path);

@@ -48,136 +48,145 @@ class FileViewer extends StatelessWidget {
     return Consumer(builder: (context, watch, child) {
       watch(fileViewerProvider).initNowDirectory(rootDirectory);
       Directory? nowDirectory = watch(fileViewerProvider).nowDirectory;
+      bool isRoot = nowDirectory!.absolute.path == rootDirectory.absolute.path;
 
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            nowDirectory!.path,
-            style: GoogleFonts.comfortaa(),
-          ),
-          leading: MaterialButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Icon(
-              backIconData(Theme.of(context).platform),
-              color: Colors.white,
+      return WillPopScope(
+        onWillPop: () async {
+          if (isRoot)
+            return true;
+          else {
+            context.read(fileViewerProvider).setNowDirectory(Directory(
+                (nowDirectory.path.split(Platform.pathSeparator)..removeLast())
+                    .join(Platform.pathSeparator)));
+
+            return false;
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(
+              nowDirectory.path,
+              style: GoogleFonts.comfortaa(),
+            ),
+            leading: MaterialButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Icon(
+                backIconData(Theme.of(context).platform),
+                color: Colors.white,
+              ),
             ),
           ),
-        ),
-        bottomNavigationBar: Container(
-          height: kToolbarHeight,
-          child: TextButton(
-            onPressed: () {
-              Navigator.pop(context, nowDirectory);
-            },
-            child: Text('Choose this folder'),
-            style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.resolveWith(
-                  (states) => Theme.of(context).appBarTheme.backgroundColor),
-              foregroundColor: MaterialStateProperty.resolveWith(
-                  (states) => Theme.of(context).appBarTheme.foregroundColor),
+          bottomNavigationBar: Container(
+            height: kToolbarHeight,
+            child: TextButton(
+              onPressed: () {
+                Navigator.pop(context, nowDirectory);
+              },
+              child: Text('Choose this folder'),
+              style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.resolveWith(
+                    (states) => Theme.of(context).appBarTheme.backgroundColor),
+                foregroundColor: MaterialStateProperty.resolveWith(
+                    (states) => Theme.of(context).appBarTheme.foregroundColor),
+              ),
             ),
           ),
+          body: FutureBuilder(
+              future: dirContents(nowDirectory, showFsType),
+              builder:
+                  (context, AsyncSnapshot<List<FileSystemEntity>> snapshot) {
+                if (snapshot.hasData) {
+                  List<FileSystemEntity>? data = snapshot.data;
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: data!.length + (isRoot ? 0 : 1),
+                    itemBuilder: (context, index) {
+                      if (!isRoot && index == 0) {
+                        return ListTile(
+                          onTap: () {
+                            context.read(fileViewerProvider).setNowDirectory(
+                                Directory((nowDirectory.path
+                                        .split(Platform.pathSeparator)
+                                          ..removeLast())
+                                    .join(Platform.pathSeparator)));
+                          },
+                          title: Text('..'),
+                          leading: Icon(Icons.arrow_upward),
+                        );
+                      } else {
+                        FileSystemEntity nowData =
+                            data[index - (isRoot ? 0 : 1)];
+                        return ListTile(
+                          onTap: () {
+                            if (nowData is Directory)
+                              context
+                                  .read(fileViewerProvider)
+                                  .setNowDirectory(nowData);
+                            if ((selectableFsType == FileSystemType.ALL ||
+                                    selectableFsType == FileSystemType.IMAGE) &&
+                                PhotoSliderProc.isImage(nowData.path)) {
+                              Navigator.pop(context, nowData);
+                            }
+                          },
+                          title: Text(Pa.basename(nowData.path)),
+                          leading: fileIcon(nowData),
+                        );
+                      }
+                    },
+                  );
+                } else
+                  return const Center(
+                    child: const CircularProgressIndicator(),
+                  );
+              }),
         ),
-        body: FutureBuilder(
-            future: _dirContents(nowDirectory, showFsType),
-            builder: (context, AsyncSnapshot<List<FileSystemEntity>> snapshot) {
-              if (snapshot.hasData) {
-                bool isRoot =
-                    nowDirectory.absolute.path == rootDirectory.absolute.path;
-                return ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: snapshot.data!.length + (isRoot ? 0 : 1),
-                  itemBuilder: (context, index) {
-                    if (!isRoot && index == 0)
-                      return ListTile(
-                        onTap: () {
-                          context.read(fileViewerProvider).setNowDirectory(
-                              Directory((nowDirectory.path
-                                      .split(Platform.pathSeparator)
-                                        ..removeLast())
-                                  .join(Platform.pathSeparator)));
-                        },
-                        title: Text('..'),
-                        leading: Icon(Icons.arrow_upward),
-                      );
-                    return ListTile(
-                      onTap: () {
-                        if (snapshot.data!.elementAt(index - (isRoot ? 0 : 1))
-                            is Directory)
-                          context.read(fileViewerProvider).setNowDirectory(
-                              snapshot.data!.elementAt(index - (isRoot ? 0 : 1))
-                                  as Directory);
-                        if ((selectableFsType == FileSystemType.ALL ||
-                                selectableFsType == FileSystemType.IMAGE) &&
-                            PhotoSliderProc.isImage(snapshot.data!
-                                .elementAt(index - (isRoot ? 0 : 1))
-                                .path)) {
-                          Navigator.pop(
-                              context,
-                              snapshot.data!
-                                  .elementAt(index - (isRoot ? 0 : 1)));
-                        }
-                      },
-                      title: Text(Pa.basename(snapshot.data!
-                          .elementAt(index - (isRoot ? 0 : 1))
-                          .path)),
-                      leading: fileIcon(
-                          snapshot.data!.elementAt(index - (isRoot ? 0 : 1))),
-                    );
-                  },
-                );
-              } else
-                return const Center(
-                  child: const CircularProgressIndicator(),
-                );
-            }),
       );
     });
   }
+}
 
-  Future<List<FileSystemEntity>> _dirContents(
-      Directory? rootDirectory, FileSystemType fsType) {
-    var files = <FileSystemEntity>[];
-    var completer = new Completer<List<FileSystemEntity>>();
-    var lister = rootDirectory?.list(recursive: false);
-    lister?.listen(
-      (file) {
-        final mimeType = lookupMimeType(file.path);
+Future<List<FileSystemEntity>> dirContents(
+    Directory? rootDirectory, FileSystemType fsType) {
+  var files = <FileSystemEntity>[];
+  var completer = new Completer<List<FileSystemEntity>>();
+  var lister = rootDirectory?.list(recursive: false);
+  lister?.listen(
+    (file) {
+      final mimeType = lookupMimeType(file.path);
 
-        if (fsType == FileSystemType.ALL)
-          files.add(file);
-        else if (fsType == FileSystemType.FOLDER && file is Directory)
-          files.add(file);
-        else if (fsType == FileSystemType.IMAGE &&
-            mimeType!.startsWith('image/')) files.add(file);
-      },
-      onDone: () {
-        files.sort((a, b) => a.path.compareTo(b.path));
-        completer.complete(files);
-      },
+      if (fsType == FileSystemType.ALL)
+        files.add(file);
+      else if (fsType == FileSystemType.FOLDER && file is Directory)
+        files.add(file);
+      else if (fsType == FileSystemType.IMAGE && mimeType!.startsWith('image/'))
+        files.add(file);
+    },
+    onDone: () {
+      files.sort((a, b) => a.path.compareTo(b.path));
+      completer.complete(files);
+    },
+  );
+  return completer.future;
+}
+
+Icon fileIcon(FileSystemEntity fs) {
+  if (fs is Directory)
+    return Icon(
+      Icons.folder,
+      color: Colors.teal,
     );
-    return completer.future;
-  }
+  else {
+    final mimeType = lookupMimeType(fs.path);
 
-  Icon fileIcon(FileSystemEntity fs) {
-    if (fs is Directory)
+    if (mimeType?.startsWith('image/') ?? false)
       return Icon(
-        Icons.folder,
-        color: Colors.teal,
+        Icons.photo,
+        color: Colors.pink,
       );
-    else {
-      final mimeType = lookupMimeType(fs.path);
 
-      if (mimeType?.startsWith('image/') ?? false)
-        return Icon(
-          Icons.photo,
-          color: Colors.pink,
-        );
-
-      return Icon(Icons.text_snippet);
-    }
+    return Icon(Icons.text_snippet);
   }
 }
 

@@ -30,12 +30,6 @@ void main() {
           case '/':
             builder = (_) => Home();
             break;
-          case '/viewer':
-            builder = (_) => Viewer(
-                  nowDirectory: args["nowDirectory"],
-                  maxPage: args["maxPage"],
-                );
-            break;
           case '/fileViewer':
             builder = (_) => FileViewer(
                   rootDirectory: args["rootDirectory"],

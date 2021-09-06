@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:path/path.dart' as Pa;
+import 'package:preload_page_view/preload_page_view.dart';
 
 class PhotoViewer extends StatefulWidget {
   final Directory nowDirectory;
@@ -74,8 +75,9 @@ class _PhotoViewerState extends State<PhotoViewer> {
         },
         child: Stack(
           children: [
-            PageView(
+            PreloadPageView(
               children: photoList,
+              preloadPagesCount: 3,
               controller: watch(photoSliderProvider).pageController,
               onPageChanged: (value) {
                 context.read(photoSliderProvider).nowPage = value.toDouble();

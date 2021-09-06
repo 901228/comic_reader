@@ -1,12 +1,15 @@
 import 'dart:io';
 
 import 'package:comic_reader/add_page/paths.dart';
+import 'package:comic_reader/backButton.dart';
 import 'package:comic_reader/fileViewer_page/fileViewer.dart';
 import 'package:comic_reader/providers.dart';
+import 'package:comic_reader/viewer_page/viewer_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path/path.dart' as Pa;
 
 class Home extends StatefulWidget {
   @override
@@ -36,6 +39,8 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
+    GlobalKey<NavigatorState> _key = GlobalKey();
+
     return Consumer(builder: (context, watch, child) {
       return Scaffold(
         appBar: AppBar(
@@ -83,24 +88,6 @@ class _HomeState extends State<Home> {
                   watch(filePathProvider).directories.elementAt(index);
               return Slidable(
                 direction: Axis.horizontal,
-                startActionPane: ActionPane(
-                  motion: ScrollMotion(),
-                  children: [
-                    SlidableAction(
-                      onPressed: (context) {
-                        context
-                            .read(filePathProvider)
-                            .deleteDirectory(nowDirectory);
-                      },
-                      icon: Icons.delete,
-                      label: "Delete",
-                      autoClose: true,
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                    )
-                  ],
-                  extentRatio: 0.2,
-                ),
                 endActionPane: ActionPane(
                   motion: ScrollMotion(),
                   children: [
@@ -121,62 +108,238 @@ class _HomeState extends State<Home> {
                 ),
                 child: ListTile(
                   onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/fileViewer',
-                      arguments: {
-                        "rootDirectory": nowDirectory,
-                        "showFsType": FileSystemType.ALL,
-                        "selectableFsType": FileSystemType.IMAGE,
-                      },
-                    ).then((value) {
-                      context.read(fileViewerProvider).disposeNowDirectory();
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                Consumer(builder: (context, watch, child) {
+                                  watch(fileViewerProvider)
+                                      .initNowDirectory(nowDirectory);
+                                  Directory? _nowDirectory =
+                                      watch(fileViewerProvider).nowDirectory;
+                                  bool isRoot = _nowDirectory!.absolute.path ==
+                                      nowDirectory.absolute.path;
 
-                      if (value != null) {
-                        final Directory _nowDirectory = (value as File).parent;
+                                  return WillPopScope(
+                                    onWillPop: () async {
+                                      if (isRoot)
+                                        return true;
+                                      else {
+                                        context
+                                            .read(fileViewerProvider)
+                                            .setNowDirectory(Directory(
+                                                (_nowDirectory.path.split(
+                                                        Platform.pathSeparator)
+                                                      ..removeLast())
+                                                    .join(Platform
+                                                        .pathSeparator)));
 
-                        var list = _nowDirectory.listSync();
-                        list.removeWhere((e) =>
-                            (e is! File || !PhotoSliderProc.isImage(e.path)));
-                        list.sort((a, b) => a.path.compareTo(b.path));
-
-                        if (list.length != 0) {
-                          context.read(photoSliderProvider).init(list
-                              .indexWhere((e) => e.path == value.path)
-                              .toDouble());
-
-                          Navigator.pushNamed(
-                            context,
-                            '/viewer',
-                            arguments: {
-                              "nowDirectory": _nowDirectory,
-                              "maxPage": list.length.toDouble(),
-                            },
-                          );
-                        } else {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: Text("Error"),
-                              content: Text(
-                                  "There is not any images in this folder."),
-                              actions: [
-                                TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
+                                        return false;
+                                      }
                                     },
-                                    child: Text("OK")),
-                              ],
-                            ),
-                          );
-                        }
-                      }
-                    });
+                                    child: Scaffold(
+                                      appBar: AppBar(
+                                        title: Text(
+                                          _nowDirectory.path,
+                                          style: GoogleFonts.comfortaa(),
+                                        ),
+                                        leading: MaterialButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                          child: Icon(
+                                            backIconData(
+                                                Theme.of(context).platform),
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      body: FutureBuilder(
+                                          future: dirContents(_nowDirectory,
+                                              FileSystemType.ALL),
+                                          builder: (context,
+                                              AsyncSnapshot<
+                                                      List<FileSystemEntity>>
+                                                  snapshot) {
+                                            if (snapshot.hasData) {
+                                              List<FileSystemEntity>? data =
+                                                  snapshot.data;
+                                              return ListView.builder(
+                                                shrinkWrap: true,
+                                                itemCount: data!.length +
+                                                    (isRoot ? 0 : 1),
+                                                itemBuilder: (context, index) {
+                                                  if (!isRoot && index == 0) {
+                                                    return ListTile(
+                                                      onTap: () {
+                                                        context
+                                                            .read(
+                                                                fileViewerProvider)
+                                                            .setNowDirectory(Directory((_nowDirectory
+                                                                    .path
+                                                                    .split(Platform
+                                                                        .pathSeparator)
+                                                                      ..removeLast())
+                                                                .join(Platform
+                                                                    .pathSeparator)));
+                                                      },
+                                                      title: Text('..'),
+                                                      leading: Icon(
+                                                          Icons.arrow_upward),
+                                                    );
+                                                  } else {
+                                                    FileSystemEntity nowData =
+                                                        data[index -
+                                                            (isRoot ? 0 : 1)];
+                                                    return ListTile(
+                                                      onTap: () {
+                                                        if (nowData
+                                                            is Directory)
+                                                          context
+                                                              .read(
+                                                                  fileViewerProvider)
+                                                              .setNowDirectory(
+                                                                  nowData);
+                                                        if (PhotoSliderProc
+                                                            .isImage(
+                                                                nowData.path)) {
+                                                          context
+                                                              .read(
+                                                                  fileViewerProvider)
+                                                              .disposeNowDirectory();
+
+                                                          final Directory
+                                                              _nowDirectory =
+                                                              (nowData as File)
+                                                                  .parent;
+
+                                                          var list =
+                                                              _nowDirectory
+                                                                  .listSync();
+                                                          list.removeWhere((e) => (e
+                                                                  is! File ||
+                                                              !PhotoSliderProc
+                                                                  .isImage(
+                                                                      e.path)));
+                                                          list.sort((a, b) =>
+                                                              a.path.compareTo(
+                                                                  b.path));
+
+                                                          if (list.length !=
+                                                              0) {
+                                                            context
+                                                                .read(
+                                                                    photoSliderProvider)
+                                                                .init(list
+                                                                    .indexWhere((e) =>
+                                                                        e.path ==
+                                                                        nowData
+                                                                            .path)
+                                                                    .toDouble());
+
+                                                            Navigator.push(
+                                                                context,
+                                                                MaterialPageRoute(
+                                                                    builder: (_) => Viewer(
+                                                                        nowDirectory:
+                                                                            _nowDirectory,
+                                                                        maxPage: list
+                                                                            .length
+                                                                            .toDouble())));
+                                                          } else {
+                                                            showDialog(
+                                                              context: context,
+                                                              builder:
+                                                                  (context) =>
+                                                                      AlertDialog(
+                                                                title: Text(
+                                                                    "Error"),
+                                                                content: Text(
+                                                                    "There is not any images in this folder."),
+                                                                actions: [
+                                                                  TextButton(
+                                                                      onPressed:
+                                                                          () {
+                                                                        Navigator.pop(
+                                                                            context);
+                                                                      },
+                                                                      child: Text(
+                                                                          "OK")),
+                                                                ],
+                                                              ),
+                                                            );
+                                                          }
+                                                        }
+                                                      },
+                                                      title: Text(Pa.basename(
+                                                          nowData.path)),
+                                                      leading:
+                                                          fileIcon(nowData),
+                                                    );
+                                                  }
+                                                },
+                                              );
+                                            } else
+                                              return const Center(
+                                                child:
+                                                    const CircularProgressIndicator(),
+                                              );
+                                          }),
+                                    ),
+                                  );
+                                })));
+                    // Navigator.pushNamed(
+                    //   context,
+                    //   '/fileViewer',
+                    //   arguments: {
+                    //     "rootDirectory": nowDirectory,
+                    //     "showFsType": FileSystemType.ALL,
+                    //     "selectableFsType": FileSystemType.IMAGE,
+                    //   },
+                    // ).then((value) {
+                    //   context.read(fileViewerProvider).disposeNowDirectory();
+
+                    //   if (value != null) {
+                    //     final Directory _nowDirectory = (value as File).parent;
+
+                    //     var list = _nowDirectory.listSync();
+                    //     list.removeWhere((e) =>
+                    //         (e is! File || !PhotoSliderProc.isImage(e.path)));
+                    //     list.sort((a, b) => a.path.compareTo(b.path));
+
+                    //     if (list.length != 0) {
+                    //       context.read(photoSliderProvider).init(list
+                    //           .indexWhere((e) => e.path == value.path)
+                    //           .toDouble());
+
+                    //       Navigator.push(
+                    //           context,
+                    //           MaterialPageRoute(
+                    //               builder: (_) => Viewer(
+                    //                   nowDirectory: _nowDirectory,
+                    //                   maxPage: list.length.toDouble())));
+                    //     } else {
+                    //       showDialog(
+                    //         context: context,
+                    //         builder: (context) => AlertDialog(
+                    //           title: Text("Error"),
+                    //           content: Text(
+                    //               "There is not any images in this folder."),
+                    //           actions: [
+                    //             TextButton(
+                    //                 onPressed: () {
+                    //                   Navigator.pop(context);
+                    //                 },
+                    //                 child: Text("OK")),
+                    //           ],
+                    //         ),
+                    //       );
+                    //     }
+                    //   }
+                    // });
                   },
-                  title: Text(watch(filePathProvider)
-                      .directories
-                      .elementAt(index)
-                      .path),
+                  title: Text(nowDirectory.path),
+                  leading: fileIcon(nowDirectory),
                 ),
               );
             }),
