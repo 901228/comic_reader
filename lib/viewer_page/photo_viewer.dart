@@ -24,36 +24,17 @@ class _PhotoViewerState extends State<PhotoViewer> {
   Widget build(BuildContext context) {
     return Consumer(builder: (context, watch, child) {
       photoList = imageList(widget.nowDirectory.listSync(), context);
-      return GestureDetector(
-        onTapDown: (details) {
-          double dxp = MediaQuery.of(context).size.width / 3;
-          double dyp = MediaQuery.of(context).size.height / 8;
-          if (details.localPosition.dx < dxp ||
-              (details.localPosition.dx < dxp * 2 &&
-                  details.localPosition.dy < dyp * 2))
-            context.read(tapPosProvider).tapDownArea = TapArea.LEFT;
-          else if (details.localPosition.dx > dxp * 2 ||
-              (details.localPosition.dx < dxp * 3 &&
-                  details.localPosition.dy > dyp * 5))
-            context.read(tapPosProvider).tapDownArea = TapArea.RIGHT;
-          else
-            context.read(tapPosProvider).tapDownArea = TapArea.MIDDLE;
+      Offset scale = Offset(0.25, 0.25);
+
+      return Listener(
+        onPointerDown: (details) {
+          context.read(tapPosProvider).tapDownArea = TapPosProc.nowArea(
+              details.localPosition, MediaQuery.of(context).size, scale);
         },
-        onTapUp: (details) {
-          double dxp = MediaQuery.of(context).size.width / 3;
-          double dyp = MediaQuery.of(context).size.height / 8;
-          if (details.localPosition.dx < dxp ||
-              (details.localPosition.dx < dxp * 2 &&
-                  details.localPosition.dy < dyp * 2))
-            context.read(tapPosProvider).tapUpArea = TapArea.LEFT;
-          else if (details.localPosition.dx > dxp * 2 ||
-              (details.localPosition.dx < dxp * 3 &&
-                  details.localPosition.dy > dyp * 5))
-            context.read(tapPosProvider).tapUpArea = TapArea.RIGHT;
-          else
-            context.read(tapPosProvider).tapUpArea = TapArea.MIDDLE;
-        },
-        onTap: () {
+        onPointerUp: (details) {
+          context.read(tapPosProvider).tapUpArea = TapPosProc.nowArea(
+              details.localPosition, MediaQuery.of(context).size, scale);
+
           if (watch(tapPosProvider).isTap() == TapArea.MIDDLE &&
               !watch(appBarVisibilityProvider).visible)
             context.read(appBarVisibilityProvider).switchVisible();
@@ -69,19 +50,36 @@ class _PhotoViewerState extends State<PhotoViewer> {
             }
           }
         },
-        onTapCancel: () {
+        // onTap: () {
+        //   if (watch(tapPosProvider).isTap() == TapArea.MIDDLE && !watch(appBarVisibilityProvider).visible)
+        //     context.read(appBarVisibilityProvider).switchVisible();
+        //   else {
+        //     if (watch(appBarVisibilityProvider).visible)
+        //       context.read(appBarVisibilityProvider).switchVisible();
+        //     if (watch(tapPosProvider).isTap() == TapArea.RIGHT) {
+        //       watch(photoSliderProvider).pageController.nextPage(
+        //           duration: Duration(microseconds: 1), curve: Curves.linear);
+        //     } else if (watch(tapPosProvider).isTap() == TapArea.LEFT) {
+        //       watch(photoSliderProvider).pageController.previousPage(
+        //           duration: Duration(microseconds: 1), curve: Curves.linear);
+        //     }
+        //   }
+        // },
+        onPointerCancel: (details) {
           if (watch(appBarVisibilityProvider).visible)
             context.read(appBarVisibilityProvider).switchVisible();
         },
         child: Stack(
           children: [
-            PreloadPageView(
-              children: photoList,
-              preloadPagesCount: 3,
+            PreloadPageView.builder(
+              itemCount: photoList.length,
+              preloadPagesCount: 2,
               controller: watch(photoSliderProvider).pageController,
               onPageChanged: (value) {
                 context.read(photoSliderProvider).nowPage = value.toDouble();
               },
+              itemBuilder: (context, index) => photoList[index],
+              pageSnapping: true,
             ),
             Container(
               alignment: Alignment.bottomRight,
@@ -118,6 +116,13 @@ class _PhotoViewerState extends State<PhotoViewer> {
       if (e is File && PhotoSliderProc.isImage(e.path)) {
         result.add(PhotoView(
           imageProvider: FileImage(e),
+          loadingBuilder: (context, event) => Container(
+            color: Colors.black,
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          // disableGestures: true,
         ));
       }
     });

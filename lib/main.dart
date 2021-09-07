@@ -1,6 +1,5 @@
 import 'package:comic_reader/fileViewer_page/fileViewer.dart';
 import 'package:comic_reader/home_page.dart';
-import 'package:comic_reader/viewer_page/viewer_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

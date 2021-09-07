@@ -88,6 +88,19 @@ class TapPosProc extends ChangeNotifier {
   TapArea _tapDown = TapArea.NONE;
   TapArea _tapUp = TapArea.NONE;
 
+  static TapArea nowArea(Offset details, Size screenSize, Offset scale) {
+    if (details.dx < screenSize.width * scale.dx ||
+        (details.dx < screenSize.width * (1 - scale.dx) &&
+            details.dy < screenSize.height * scale.dy))
+      return TapArea.LEFT;
+    else if (details.dx > screenSize.width * (1 - scale.dx) ||
+        (details.dx < screenSize.width &&
+            details.dy > screenSize.height * (1 - scale.dy)))
+      return TapArea.RIGHT;
+    else
+      return TapArea.MIDDLE;
+  }
+
   set tapDownArea(TapArea pos) {
     _tapDown = pos;
   }

@@ -164,14 +164,25 @@ Future<List<FileSystemEntity>> dirContents(
         files.add(file);
     },
     onDone: () {
-      files.sort((a, b) => a.path.compareTo(b.path));
+      files.sort((a, b) {
+        final ia = double.tryParse(Pa.basename(a.path));
+        final ib = double.tryParse(Pa.basename(b.path));
+        if (ia != null && ib == null)
+          return -1;
+        else if (ia == null && ib != null)
+          return 1;
+        else if (ia != null && ib != null) {
+          return ia.compareTo(ib);
+        } else
+          return Pa.basename(a.path).compareTo(Pa.basename(b.path));
+      });
       completer.complete(files);
     },
   );
   return completer.future;
 }
 
-Icon fileIcon(FileSystemEntity fs) {
+Widget fileIcon(FileSystemEntity fs) {
   if (fs is Directory)
     return Icon(
       Icons.folder,
@@ -181,9 +192,25 @@ Icon fileIcon(FileSystemEntity fs) {
     final mimeType = lookupMimeType(fs.path);
 
     if (mimeType?.startsWith('image/') ?? false)
-      return Icon(
-        Icons.photo,
-        color: Colors.pink,
+      return Image(
+        image: FileImage(fs as File),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+
+          // Icon(
+          //   Icons.photo,
+          //   color: Colors.pink,
+          // ),
+        },
       );
 
     return Icon(Icons.text_snippet);
