@@ -26,15 +26,16 @@ class _PhotoViewerState extends State<PhotoViewer> {
       photoList = imageList(widget.nowDirectory.listSync(), context);
       Offset scale = Offset(0.25, 0.25);
 
-      return Listener(
-        onPointerDown: (details) {
+      return GestureDetector(
+        onTapDown: (details) {
           context.read(tapPosProvider).tapDownArea = TapPosProc.nowArea(
               details.localPosition, MediaQuery.of(context).size, scale);
         },
-        onPointerUp: (details) {
+        onTapUp: (details) {
           context.read(tapPosProvider).tapUpArea = TapPosProc.nowArea(
               details.localPosition, MediaQuery.of(context).size, scale);
-
+        },
+        onTap: () {
           if (watch(tapPosProvider).isTap() == TapArea.MIDDLE &&
               !watch(appBarVisibilityProvider).visible)
             context.read(appBarVisibilityProvider).switchVisible();
@@ -50,22 +51,7 @@ class _PhotoViewerState extends State<PhotoViewer> {
             }
           }
         },
-        // onTap: () {
-        //   if (watch(tapPosProvider).isTap() == TapArea.MIDDLE && !watch(appBarVisibilityProvider).visible)
-        //     context.read(appBarVisibilityProvider).switchVisible();
-        //   else {
-        //     if (watch(appBarVisibilityProvider).visible)
-        //       context.read(appBarVisibilityProvider).switchVisible();
-        //     if (watch(tapPosProvider).isTap() == TapArea.RIGHT) {
-        //       watch(photoSliderProvider).pageController.nextPage(
-        //           duration: Duration(microseconds: 1), curve: Curves.linear);
-        //     } else if (watch(tapPosProvider).isTap() == TapArea.LEFT) {
-        //       watch(photoSliderProvider).pageController.previousPage(
-        //           duration: Duration(microseconds: 1), curve: Curves.linear);
-        //     }
-        //   }
-        // },
-        onPointerCancel: (details) {
+        onTapCancel: () {
           if (watch(appBarVisibilityProvider).visible)
             context.read(appBarVisibilityProvider).switchVisible();
         },
@@ -122,7 +108,6 @@ class _PhotoViewerState extends State<PhotoViewer> {
               child: CircularProgressIndicator(),
             ),
           ),
-          // disableGestures: true,
         ));
       }
     });

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+enum BarAlignment { top, bottom, left, right }
+
 class AnimatedAppBar extends StatelessWidget implements PreferredSizeWidget {
   AnimatedAppBar({
     required this.child,
@@ -11,7 +13,7 @@ class AnimatedAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget child;
   final AnimationController controller;
   final bool visible;
-  final TextDirection direction;
+  final BarAlignment direction;
 
   @override
   Size get preferredSize => (child as PreferredSizeWidget).preferredSize;
@@ -19,20 +21,35 @@ class AnimatedAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     visible ? controller.reverse() : controller.forward();
-    return direction == TextDirection.ltr
-        ? SlideTransition(
-            position:
-                Tween<Offset>(begin: Offset.zero, end: Offset(0, -1)).animate(
-              CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn),
-            ),
-            child: child,
-          )
-        : SlideTransition(
-            position:
-                Tween<Offset>(begin: Offset.zero, end: Offset(0, 1)).animate(
-              CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn),
-            ),
-            child: child,
-          );
+    if (direction == BarAlignment.top)
+      return SlideTransition(
+        position: Tween<Offset>(begin: Offset.zero, end: Offset(0, -1)).animate(
+          CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn),
+        ),
+        child: child,
+      );
+    else if (direction == BarAlignment.bottom)
+      return SlideTransition(
+        position: Tween<Offset>(begin: Offset.zero, end: Offset(0, 1)).animate(
+          CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn),
+        ),
+        child: child,
+      );
+    else if (direction == BarAlignment.left)
+      return SlideTransition(
+        position: Tween<Offset>(begin: Offset.zero, end: Offset(-1, 0)).animate(
+          CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn),
+        ),
+        child: child,
+      );
+    else if (direction == BarAlignment.right)
+      return SlideTransition(
+        position: Tween<Offset>(begin: Offset.zero, end: Offset(1, 0)).animate(
+          CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn),
+        ),
+        child: child,
+      );
+    else
+      return Center(child: CircularProgressIndicator());
   }
 }

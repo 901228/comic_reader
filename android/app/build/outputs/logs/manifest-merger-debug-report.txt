@@ -60,7 +60,7 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.0] /home/harry
 		ADDED from /home/harry90/東西/flutter/comic_reader/android/app/src/main/AndroidManifest.xml:6:9-37
 	android:icon
 		ADDED from /home/harry90/東西/flutter/comic_reader/android/app/src/main/AndroidManifest.xml:7:9-43
-activity#com.example.comic_reader.MainActivity
+activity#mochi.flutter.comic_reader.MainActivity
 ADDED from /home/harry90/東西/flutter/comic_reader/android/app/src/main/AndroidManifest.xml:9:9-37:20
 	android:launchMode
 		ADDED from /home/harry90/東西/flutter/comic_reader/android/app/src/main/AndroidManifest.xml:11:13-43

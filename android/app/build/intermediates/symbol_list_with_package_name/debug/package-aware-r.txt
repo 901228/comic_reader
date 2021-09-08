@@ -1,4 +1,4 @@
-com.example.comic_reader
+mochi.flutter.comic_reader
 attr alpha
 attr font
 attr fontProviderAuthority

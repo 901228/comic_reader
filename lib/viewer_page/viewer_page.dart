@@ -38,7 +38,7 @@ class _ViewerState extends State<Viewer> with SingleTickerProviderStateMixin {
     return Consumer(
       builder: (context, watch, child) => Scaffold(
         appBar: AnimatedAppBar(
-          direction: TextDirection.ltr,
+          direction: BarAlignment.top,
           visible: watch(appBarVisibilityProvider).visible,
           controller: animationController,
           child: AppBar(
@@ -57,7 +57,7 @@ class _ViewerState extends State<Viewer> with SingleTickerProviderStateMixin {
         bottomNavigationBar: Container(
           height: kToolbarHeight * 2,
           child: AnimatedAppBar(
-            direction: TextDirection.rtl,
+            direction: BarAlignment.bottom,
             visible: watch(appBarVisibilityProvider).visible,
             controller: animationController,
             child: BottomToolBar(maxPage: widget.maxPage),

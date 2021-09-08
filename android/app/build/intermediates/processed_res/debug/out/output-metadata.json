@@ -4,7 +4,7 @@
     "type": "PROCESSED_RES",
     "kind": "Directory"
   },
-  "applicationId": "com.example.comic_reader",
+  "applicationId": "mochi.flutter.comic_reader",
   "variantName": "processDebugResources",
   "elements": [
     {
